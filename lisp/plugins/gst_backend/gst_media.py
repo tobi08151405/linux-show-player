@@ -161,6 +161,8 @@ class GstMedia(Media):
 
     def __reset_media(self):
         self.__loop = self.loop
+        if "VideoSink" in self.pipe:
+            self.__init_pipeline()  # NOTE: Not the best solution, but else the sink does not close
 
     def __segment_stop_position(self):
         if 0 < self.stop_time < self.duration:

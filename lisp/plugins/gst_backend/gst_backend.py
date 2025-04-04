@@ -32,6 +32,7 @@ from lisp.plugins.gst_backend.gi_repository import Gst
 from lisp.plugins.gst_backend.gst_media_cue import (
     GstCueFactory,
     UriAudioCueFactory,
+    UriVideoCueFactory
 )
 from lisp.plugins.gst_backend.gst_media_settings import GstMediaSettings
 from lisp.plugins.gst_backend.gst_settings import GstSettings
@@ -80,6 +81,11 @@ class GstBackend(Plugin, BaseBackend):
             category=QT_TRANSLATE_NOOP("CueCategory", "Media cues"),
             shortcut="CTRL+M",
         )
+        self.app.window.registerCueMenu(
+            translate("GstBackend", "Video cue (from file)"),
+            self._add_uri_video_cue,
+            category=QT_TRANSLATE_NOOP("CueCategory", "Media cues"),
+        )
 
         # Load elements and their settings-widgets
         elements.load()
@@ -119,6 +125,12 @@ class GstBackend(Plugin, BaseBackend):
         )
 
     def _add_uri_audio_cue(self):
+        return self._add_uri_media_cue(False)
+
+    def _add_uri_video_cue(self):
+        return self._add_uri_media_cue(True)
+
+    def _add_uri_media_cue(self, isvideo=False):
         """Add audio MediaCue(s) form user-selected files"""
         # Get the last visited directory, or use the session-file location
         directory = GstBackend.Config.get("mediaLookupDir", "")
@@ -138,7 +150,7 @@ class GstBackend(Plugin, BaseBackend):
             GstBackend.Config["mediaLookupDir"] = os.path.dirname(files[0])
             GstBackend.Config.write()
 
-            self.add_cue_from_files(files)
+            self.add_cue_from_files(files, isvideo)
 
     def add_cue_from_urls(self, urls):
         extensions = self.supported_extensions()
@@ -154,11 +166,14 @@ class GstBackend(Plugin, BaseBackend):
 
         self.add_cue_from_files(files)
 
-    def add_cue_from_files(self, files):
+    def add_cue_from_files(self, files, isvideo=False):
         QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
 
         # Create media cues, and add them to the Application cue_model
-        factory = UriAudioCueFactory(GstBackend.Config["pipeline"])
+        if isvideo:
+            factory = UriVideoCueFactory(GstBackend.Config["pipeline"])
+        else:
+            factory = UriAudioCueFactory(GstBackend.Config["pipeline"])
 
         cues = []
         for file in files:
